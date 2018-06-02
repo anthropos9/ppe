@@ -18,4 +18,16 @@ switch ($task) {
 
         $export->$task($dir, $format);
         break;
+
+    case 'import':
+        if (empty($argv[2]) || empty($argv[3])) {
+            print 'Missing username or password';
+            exit;
+        }
+        $un = $argv[2];
+        $pw = $argv[3];
+
+        $export->login($un,$pw);
+        $export->getRecipes();
+        break;
 }

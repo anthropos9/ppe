@@ -17,6 +17,9 @@ class Export
     public $recipes = [];
     private $crawler;
     private $twig;
+    private $client;
+    private $jar;
+
     public function __construct()
     {
         $loader     = new Twig_Loader_Filesystem(__DIR__ . '/views');
@@ -26,6 +29,9 @@ class Export
         ));
 
         $this->twig->addExtension(new Twig_Extension_Debug());
+
+        $this->client = new Client(['base_uri' => 'https://www.pepperplate.com']);
+        $this->jar    = new \GuzzleHttp\Cookie\CookieJar;
 
     }
 
@@ -52,12 +58,9 @@ class Export
 
     }
 
-    public function download($un, $pw)
+    public function login($un, $pw)
     {
-
-        $client = new Client(['base_uri' => 'https://www.pepperplate.com']);
-        $jar    = new \GuzzleHttp\Cookie\CookieJar;
-        $login  = $client->request('POST', '/login.aspx', [
+        $login = $this->client->request('POST', '/login.aspx', [
             'form_params' => [
                 'ctl00$cphMain$loginForm$tbEmail'    => $un,
                 'ctl00$cphMain$loginForm$tbPassword' => $pw,
@@ -66,17 +69,52 @@ class Export
                 '__EVENTVALIDATION'                  => '/wEdAAa/1rXdVU0+E4I6qe/8/1vr5NjnQnV3ACakt+OFoq/poIk+G0F2hkBAuVGSTeHfUEPAXUaOb/COCTyxdHOCu+1TWS9Byv/QKTlj8oYJ3PuJaAwq+cY+TuM+f6PEOa5kpFdLxoWu1SzyQ+dSe4wMXUj8COE0cW4aUjyR8doM83m83w==',
                 "__EVENTTARGET"                      => 'ctl00$cphMain$loginForm$ibSubmit',
             ],
-            'cookies'     => $jar,
+            'cookies'     => $this->jar,
         ]);
 
         $res = $login->getBody();
+
+    }
+
+    public function getRecipes()
+    {
+        $jsonReq = [
+                "ingredients" => true,
+                "MessageType" => "getsearchresults",
+                "page"        => 0,
+                "pagesize"    => 20,
+                "text"        => '',
+                "title"       => true,
+            ];
+        $req = $this->client->request('POST', '/search/default.aspx/getsearchresults', [
+            'json' => $jsonReq,
+            'cookies' => $this->jar
+        ]);
+
+        $resp = $req->getBody();
+        $json = json_decode($resp);
+        $totalRecipes = $json->d->TotalResults;
+
+        $jsonReq['pagesize'] = $totalRecipes;
+        $req2 = $this->client->request('POST', '/search/default.aspx/getsearchresults', [
+            'json' => $jsonReq,
+            'cookies' => $this->jar
+        ]);
+        $resp2 = $req->getBody();
+        $json2 = json_decode($resp2);
+
+        return $json2;
+    }
+
+    public function download($un, $pw)
+    {
 
         $handle = fopen(__DIR__ . '/pp2.csv', 'r');
 // $csv = fgetcsv($handle);
         $base = __DIR__ . '/recipes/';
 
         while ($r = fgetcsv($handle)) {
-            $recipe = $client->request('GET', '/recipes/' . $r[1], ['cookies' => $jar]);
+            $recipe = $this->client->request('GET', '/recipes/' . $r[1], ['cookies' => $this->jar]);
 
             $filename = str_replace(" ", '_', $r[0]);
             // d($r);
