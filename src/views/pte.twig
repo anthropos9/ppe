@@ -1,0 +1,12 @@
+Title: {{title|raw}}
+Description: {{description}}
+Prep Time: {{prep_time}}
+Cook Time: {{cook_time}}
+Serves: {{serves}}
+source: {{source}}
+tags: {% for tag in tags %}{{tag|raw}} {% if not loop.last %}^ {% endif %}{% endfor %}
+
+Ingredients:
+{{ingredients}}
+Directions:
+{{directions}}

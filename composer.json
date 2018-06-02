@@ -1,0 +1,15 @@
+{
+    "autoload": {
+        "psr-4": {
+            "Ppe\\": "src/"
+        }
+    },
+    "require": {
+        "league/csv": "^7.2",
+        "guzzlehttp/guzzle": "^6.1",
+        "kint-php/kint": "^2.2",
+        "symfony/dom-crawler": "^3.4",
+        "symfony/css-selector": "^3.4",
+        "twig/twig": "^2.0"
+    }
+}
