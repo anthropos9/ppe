@@ -37,7 +37,9 @@ The config file has 2 properties: the Twig template and the file type to save in
 
 ### Twig Template
 
-I've only created the pte.twig Twig template, because that's the only one I needed. It's formatted to work with the importer for [Plan to Eat](https://www.plantoeat.com/).
+I've only created the pte.twig Twig template, because that's the only one I needed. It's formatted to work with the importer for [Plan to Eat](https://www.plantoeat.com/). 
+
+*If you need another template, please create a pull request and I'd love to add it to the list*
 
 ### File Type
 
