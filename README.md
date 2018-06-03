@@ -1,6 +1,11 @@
 # Pepperplate Exporter
 A tool for exporting recipes out of the [Pepperplate](http://www.pepperplate.com/) recipe managment system and formatting those recipes in a way that is useful to the user.
 
+## Requirements
+
+* PHP 7
+* BASH terminal
+
 ## Installation
 
 - Clone the project
