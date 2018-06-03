@@ -6,6 +6,7 @@ use Symfony\Component\DomCrawler\Crawler;
 use Twig_Environment;
 use Twig_Extension_Debug;
 use Twig_Loader_Filesystem;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * Class to scrape recipes from Pepperplate
@@ -19,9 +20,12 @@ class Export
     private $twig;
     private $client;
     private $jar;
+    private $config;
 
     public function __construct()
     {
+        $this->config = Yaml::parseFile(__DIR__ . '/../config/config.yml');
+
         $loader     = new Twig_Loader_Filesystem(__DIR__ . '/views');
         $this->twig = new Twig_Environment($loader, array(
             'debug' => true,
@@ -113,13 +117,13 @@ class Export
         foreach($list as $item) {
             $req = $this->client->request('GET', '/recipes/view.aspx?id=' . $item->Id , ['cookies' => $this->jar]);
 
-            $filename = $this->toAscii($item->Title) . '.txt';
+            $filename = $this->toAscii($item->Title) . '.' . $this->config['output_format'];
 
             $html = $req->getBody();
 
             $recipe = $this->crawl($html);
 
-            $tmpl = $this->twig->loadTemplate('pte.twig');
+            $tmpl = $this->twig->loadTemplate($this->config['template']);
             $content = $tmpl->render($recipe);
 
             $this->save($filename,$content);
