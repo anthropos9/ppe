@@ -2,6 +2,7 @@
 namespace Ppe;
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Cookie\CookieJar;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\Yaml\Yaml;
 use Twig_Environment;
@@ -15,11 +16,11 @@ use Twig_Loader_Filesystem;
 class Export
 {
     private $output = __DIR__ . '/../output/';
-    private $crawler;
-    private $twig;
-    private $client;
-    private $jar;
-    private $config;
+    private $crawler; // DomCrawler\Crawler object
+    private $twig; // Twig object
+    private $client; // Guzzle client
+    private $jar; // Guzzle CookieJar
+    private $config; // Array from YAML file
 
     public function __construct()
     {
@@ -34,33 +35,39 @@ class Export
         $this->twig->addExtension(new Twig_Extension_Debug());
 
         $this->client = new Client(['base_uri' => 'https://www.pepperplate.com']);
-        $this->jar    = new \GuzzleHttp\Cookie\CookieJar;
+        $this->jar    = new CookieJar;
 
     }
 
-    public function reformat($dir = 'recipes', $format = 'txt')
-    {
-        $files = scandir($this->output . $dir);
+/*    public function reformat($dir = 'recipes', $format = 'txt')
+{
+$files = scandir($this->output . $dir);
 
-        foreach ($files as $f) {
+foreach ($files as $f) {
 
-            if (substr($f, 0, 1) != '.') {
-                $html = file_get_contents($this->output . 'recipes/' . $f);
+if (substr($f, 0, 1) != '.') {
+$html = file_get_contents($this->output . 'recipes/' . $f);
 
-                $filename = $this->createFileName($format, $f);
+$filename = $this->createFileName($format, $f);
 
-                $recipe  = $this->crawl($html);
-                $tmpl    = $this->twig->loadTemplate('pte.twig');
-                $content = $tmpl->render($recipe);
+$recipe  = $this->crawl($html);
+$tmpl    = $this->twig->loadTemplate('pte.twig');
+$content = $tmpl->render($recipe);
 
-                $this->save($filename, $content);
+$this->save($filename, $content);
 
-            }
+}
 
-        }
+}
 
-    }
+}*/
 
+    /**
+     * Log into Pepperplate
+     * @param  string $un email of the user logging in
+     * @param  string $pw password of the user logging in
+     * @return void
+     */
     public function login($un, $pw)
     {
         $this->message('Logging In');
@@ -80,6 +87,10 @@ class Export
 
     }
 
+    /**
+     * Get a list of recipes from Pepperplate
+     * @return array Array of recipe details
+     */
     public function getRecipes()
     {
         $this->message('Getting number of recipes');
@@ -114,6 +125,12 @@ class Export
         return $json2->d->Items;
     }
 
+    /**
+     * Process the list of recipes loading each recipe
+     * then rendering in the chosen format
+     * @param  array $list Array of recipes
+     * @return void
+     */
     public function download($list)
     {
         $base = $this->output . '/clean/';
@@ -139,6 +156,11 @@ class Export
 
     }
 
+    /**
+     * Crawl the recipe page for details to be exported
+     * @param  string $html Webpage to be crawled
+     * @return array       Array of recipe details
+     */
     public function crawl($html)
     {
         $recipe = [
@@ -171,6 +193,12 @@ class Export
 
     }
 
+    /**
+     * Save the recipe
+     * @param  string $filename filename for the exported recipe
+     * @param  array $content  recipe details
+     * @return void
+     */
     private function save($filename, $content)
     {
         $h = fopen($this->output . 'clean/' . $filename, 'w');
@@ -178,6 +206,10 @@ class Export
         fclose($h);
     }
 
+    /**
+     * Process the ingredients from a recipe
+     * @return string ingredients list
+     */
     private function getIngredients()
     {
         $ingredients = $this->crawler->filter('.inggroups')->each(function (Crawler $node, $i) {
@@ -197,6 +229,11 @@ class Export
 
     }
 
+    /**
+     * Get a node if it exists
+     * @param  string $id the ID of the node being pulled
+     * @return string     The processed node or FALSE
+     */
     private function getNode($id)
     {
         $node = $this->crawler->filter('#' . $id);
@@ -209,6 +246,11 @@ class Export
 
     }
 
+    /**
+     * Get the HREF attribute of a link node
+     * @param  string $id node ID
+     * @return string     The processed node or FALSE
+     */
     private function getLinkNode($id)
     {
         $node = $this->crawler->filter('#' . $id);
@@ -221,6 +263,10 @@ class Export
 
     }
 
+    /**
+     * Pull and process the directions for the recipe
+     * @return string The processed directions
+     */
     private function getDirections()
     {
         $directions = $this->crawler->filter('.dirgroups')->each(function (Crawler $node, $i) {
@@ -238,6 +284,10 @@ class Export
 
     }
 
+    /**
+     * Get the tags from the recipe then explode into an array
+     * @return array List of tags
+     */
     private function getTags()
     {
         $tags    = [];
@@ -255,15 +305,22 @@ class Export
         return $tags ?? false;
     }
 
-    private function createFileName($ext, $original)
-    {
-        $bits = explode(".", $original);
-        array_pop($bits);
-        $bits[] = $ext;
+/*    private function createFileName($ext, $original)
+{
+$bits = explode(".", $original);
+array_pop($bits);
+$bits[] = $ext;
 
-        return implode(".", $bits);
-    }
+return implode(".", $bits);
+}*/
 
+    /**
+     * Convert a string to a filename safe string
+     * @param  string $str       string to be converted
+     * @param  array  $replace   characters to be replaced with a space
+     * @param  string $delimiter connecting delimiter
+     * @return string            reformatted string
+     */
     public function toAscii($str, $replace = array(), $delimiter = '-')
     {
 
@@ -279,6 +336,11 @@ class Export
         return $clean;
     }
 
+    /**
+     * Echo a message to the screen
+     * @param  string $msg message to be printed
+     * @return void
+     */
     public function message($msg)
     {
         echo $msg . PHP_EOL;
