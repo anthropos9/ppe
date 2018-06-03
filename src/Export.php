@@ -103,28 +103,27 @@ class Export
         $resp2 = $req->getBody();
         $json2 = json_decode($resp2);
 
-        return $json2;
+        return $json2->d->Items;
     }
 
-    public function download($un, $pw)
+    public function download($list)
     {
+        $base = $this->output . '/clean/';
 
-        $handle = fopen(__DIR__ . '/pp2.csv', 'r');
-// $csv = fgetcsv($handle);
-        $base = __DIR__ . '/recipes/';
+        foreach($list as $item) {
+            $req = $this->client->request('GET', '/recipes/view.aspx?id=' . $item->Id , ['cookies' => $this->jar]);
 
-        while ($r = fgetcsv($handle)) {
-            $recipe = $this->client->request('GET', '/recipes/' . $r[1], ['cookies' => $this->jar]);
+            $filename = $this->toAscii($item->Title) . '.txt';
 
-            $filename = str_replace(" ", '_', $r[0]);
-            // d($r);
-            $h = fopen($base . $filename . '.htm', 'w');
+            $html = $req->getBody();
 
-            if ($h) {
-                fwrite($h, $recipe->getBody());
-            }
+            $recipe = $this->crawl($html);
 
-            fclose($h);
+            $tmpl = $this->twig->loadTemplate('pte.twig');
+            $content = $tmpl->render($recipe);
+
+            $this->save($filename,$content);
+
         }
 
     }
@@ -251,6 +250,21 @@ class Export
         $bits[] = $ext;
 
         return implode(".", $bits);
+    }
+
+    public function toAscii($str, $replace = array(), $delimiter = '-')
+    {
+
+        if (!empty($replace)) {
+            $str = str_replace((array) $replace, ' ', $str);
+        }
+
+        $clean = iconv('UTF-8', 'ASCII//TRANSLIT', $str);
+        $clean = preg_replace("/[^a-zA-Z0-9\/_|+ -]/", '', $clean);
+        $clean = strtolower(trim($clean, '-'));
+        $clean = preg_replace("/[\/_|+ -]+/", $delimiter, $clean);
+
+        return $clean;
     }
 
 }
