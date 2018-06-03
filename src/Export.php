@@ -3,6 +3,10 @@ namespace Ppe;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\ServerException;
+use GuzzleHttp\Psr7;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\Yaml\Yaml;
 use Twig_Environment;
@@ -71,19 +75,35 @@ $this->save($filename, $content);
     public function login($un, $pw)
     {
         $this->message('Logging In');
-        $login = $this->client->request('POST', '/login.aspx', [
-            'form_params' => [
-                'ctl00$cphMain$loginForm$tbEmail'    => $un,
-                'ctl00$cphMain$loginForm$tbPassword' => $pw,
-                '__VIEWSTATE'                        => '/wEPDwUKLTcxOTM1MDY3Mw9kFgJmD2QWAgIBD2QWBmYPFgIeB1Zpc2libGVoZAIBDxYCHwBnZAIFD2QWAgIBD2QWAgIBD2QWAmYPZBYCAgEPFgIfAGhkGAEFHl9fQ29udHJvbHNSZXF1aXJlUG9zdEJhY2tLZXlfXxYBBSRjdGwwMCRjcGhNYWluJGxvZ2luRm9ybSRjYlJlbWVtYmVyTWX6+EFLFMRKbfydmpUj4wAPc7mvB44zvf0PSqv5gYc/oQ==',
-                '__VIEWSTATEGENERATOR'               => 'C2EE9ABB',
-                '__EVENTVALIDATION'                  => '/wEdAAa/1rXdVU0+E4I6qe/8/1vr5NjnQnV3ACakt+OFoq/poIk+G0F2hkBAuVGSTeHfUEPAXUaOb/COCTyxdHOCu+1TWS9Byv/QKTlj8oYJ3PuJaAwq+cY+TuM+f6PEOa5kpFdLxoWu1SzyQ+dSe4wMXUj8COE0cW4aUjyR8doM83m83w==',
-                "__EVENTTARGET"                      => 'ctl00$cphMain$loginForm$ibSubmit',
-            ],
-            'cookies'     => $this->jar,
-        ]);
+        try {
+            $login = $this->client->request('POST', '/login.aspx', [
+                'form_params' => [
+                    'ctl00$cphMain$loginForm$tbEmail'    => $un,
+                    'ctl00$cphMain$loginForm$tbPassword' => $pw,
+                    '__VIEWSTATE'                        => '/wEPDwUKLTcxOTM1MDY3Mw9kFgJmD2QWAgIBD2QWBmYPFgIeB1Zpc2libGVoZAIBDxYCHwBnZAIFD2QWAgIBD2QWAgIBD2QWAmYPZBYCAgEPFgIfAGhkGAEFHl9fQ29udHJvbHNSZXF1aXJlUG9zdEJhY2tLZXlfXxYBBSRjdGwwMCRjcGhNYWluJGxvZ2luRm9ybSRjYlJlbWVtYmVyTWX6+EFLFMRKbfydmpUj4wAPc7mvB44zvf0PSqv5gYc/oQ==',
+                    '__VIEWSTATEGENERATOR'               => 'C2EE9ABB',
+                    '__EVENTVALIDATION'                  => '/wEdAAa/1rXdVU0+E4I6qe/8/1vr5NjnQnV3ACakt+OFoq/poIk+G0F2hkBAuVGSTeHfUEPAXUaOb/COCTyxdHOCu+1TWS9Byv/QKTlj8oYJ3PuJaAwq+cY+TuM+f6PEOa5kpFdLxoWu1SzyQ+dSe4wMXUj8COE0cW4aUjyR8doM83m83w==',
+                    "__EVENTTARGET"                      => 'ctl00$cphMain$loginForm$ibSubmit',
+                ],
+                'cookies'     => $this->jar,
+            ]);
 
-        $res = $login->getBody();
+            $res = $login->getBody();
+        } catch (RequestException $e) {
+
+            if ($e->hasResponse()) {
+                $this->message(Psr7\str($e->getResponse()));
+            } else {
+                $this->message('There was a problem connecting to Pepperplate. Can\'t go on.');
+            }
+
+        } catch (ConnectException $e) {
+            $this->message(Psr7\str($e->getResponse()));
+        } catch (ServerException $e) {
+            $this->message(Psr7\str($e->getResponse));
+        } catch (Exception $e) {
+            $this->message('There was a problem logging in.');
+        }
 
     }
 
@@ -102,27 +122,61 @@ $this->save($filename, $content);
             "text"        => '',
             "title"       => true,
         ];
-        $req = $this->client->request('POST', '/search/default.aspx/getsearchresults', [
-            'json'    => $jsonReq,
-            'cookies' => $this->jar,
-        ]);
+        try {
+            $req = $this->client->request('POST', '/search/default.aspx/getsearchresults', [
+                'json'    => $jsonReq,
+                'cookies' => $this->jar,
+            ]);
 
-        $resp         = $req->getBody();
-        $json         = json_decode($resp);
-        $totalRecipes = $json->d->TotalResults;
+            $resp         = $req->getBody();
+            $json         = json_decode($resp);
+            $totalRecipes = $json->d->TotalResults;
 
-        $jsonReq['pagesize'] = $totalRecipes;
+            $jsonReq['pagesize'] = $totalRecipes;
+        } catch (RequestException $e) {
+
+            if ($e->hasResponse()) {
+                $this->message(Psr7\str($e->getResponse()));
+            } else {
+                $this->message('There was a problem getting the list of recipes. 003');
+            }
+
+        } catch (ConnectException $e) {
+            $this->message(Psr7\str($e->getResponse()));
+        } catch (ServerException $e) {
+            $this->message(Psr7\str($e->getResponse));
+        } catch (Exception $e) {
+            $this->message('There was a problem getting the list of recipes. 001');
+        }
 
         $this->message('Getting list of recipes');
-        $req2 = $this->client->request('POST', '/search/default.aspx/getsearchresults', [
-            'json'    => $jsonReq,
-            'cookies' => $this->jar,
-        ]);
 
-        $resp2 = $req2->getBody();
-        $json2 = json_decode($resp2);
+        try {
+            $req2 = $this->client->request('POST', '/search/default.aspx/getsearchresults', [
+                'json'    => $jsonReq,
+                'cookies' => $this->jar,
+            ]);
 
-        return $json2->d->Items;
+            $resp2 = $req2->getBody();
+            $json2 = json_decode($resp2);
+
+            return $json2->d->Items;
+        } catch (RequestException $e) {
+
+            if ($e->hasResponse()) {
+                $this->message(Psr7\str($e->getResponse()));
+            } else {
+                $this->message('There was a problem getting the list of recipes. 004');
+            }
+
+        } catch (ConnectException $e) {
+            $this->message(Psr7\str($e->getResponse()));
+        } catch (ServerException $e) {
+            $this->message(Psr7\str($e->getResponse));
+        } catch (Exception $e) {
+            $this->message('There was a problem getting the list of recipes. 002');
+        }
+
     }
 
     /**
@@ -137,19 +191,36 @@ $this->save($filename, $content);
 
         foreach ($list as $item) {
             $this->message('Processing ' . $item->Title);
-            $req = $this->client->request('GET', '/recipes/view.aspx?id=' . $item->Id, ['cookies' => $this->jar]);
+            try {
+                $req = $this->client->request('GET', '/recipes/view.aspx?id=' . $item->Id, ['cookies' => $this->jar]);
 
-            $filename = $this->toAscii($item->Title) . '.' . $this->config['output_format'];
+                $filename = $this->toAscii($item->Title) . '.' . $this->config['output_format'];
 
-            $html = (string) $req->getBody();
+                $html = (string) $req->getBody();
 
-            $recipe = $this->crawl($html);
+                $recipe = $this->crawl($html);
 
-            $tmpl    = $this->twig->loadTemplate($this->config['template']);
-            $content = $tmpl->render($recipe);
+                $tmpl    = $this->twig->loadTemplate($this->config['template']);
+                $content = $tmpl->render($recipe);
 
-            $this->message('Saving ' . $item->Title);
-            $this->save($filename, $content);
+                $this->message('Saving ' . $item->Title);
+                $this->save($filename, $content);
+            } catch (RequestException $e) {
+
+                if ($e->hasResponse()) {
+                    $this->message(Psr7\str($e->getResponse()));
+                } else {
+                    $this->message('There was a problem processing ' . $item->Title . '. 001');
+                }
+
+            } catch (ConnectException $e) {
+                $this->message(Psr7\str($e->getResponse()));
+            } catch (ServerException $e) {
+                $this->message(Psr7\str($e->getResponse));
+            } catch (Exception $e) {
+                $this->message('There was a problem processing ' . $item->Title . '. 002');
+            }
+
         }
 
         $this->message('Done');
@@ -293,7 +364,7 @@ $this->save($filename, $content);
         $tags    = [];
         $rawTags = $this->crawler->filter('.tags > span.text');
 
-        if (!empty($rawTags->count() > 0)) {
+        if ($rawTags->count() > 0) {
             $tmp = explode(",", $rawTags->text());
 
             foreach ($tmp as $t) {
