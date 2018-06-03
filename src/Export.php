@@ -3,10 +3,10 @@ namespace Ppe;
 
 use GuzzleHttp\Client;
 use Symfony\Component\DomCrawler\Crawler;
+use Symfony\Component\Yaml\Yaml;
 use Twig_Environment;
 use Twig_Extension_Debug;
 use Twig_Loader_Filesystem;
-use Symfony\Component\Yaml\Yaml;
 
 /**
  * Class to scrape recipes from Pepperplate
@@ -15,7 +15,6 @@ use Symfony\Component\Yaml\Yaml;
 class Export
 {
     private $output = __DIR__ . '/../output/';
-    public $recipes = [];
     private $crawler;
     private $twig;
     private $client;
@@ -64,6 +63,7 @@ class Export
 
     public function login($un, $pw)
     {
+        $this->message('Logging In');
         $login = $this->client->request('POST', '/login.aspx', [
             'form_params' => [
                 'ctl00$cphMain$loginForm$tbEmail'    => $un,
@@ -82,29 +82,33 @@ class Export
 
     public function getRecipes()
     {
+        $this->message('Getting number of recipes');
         $jsonReq = [
-                "ingredients" => true,
-                "MessageType" => "getsearchresults",
-                "page"        => 0,
-                "pagesize"    => 20,
-                "text"        => '',
-                "title"       => true,
-            ];
+            "ingredients" => true,
+            "MessageType" => "getsearchresults",
+            "page"        => 0,
+            "pagesize"    => 20,
+            "text"        => '',
+            "title"       => true,
+        ];
         $req = $this->client->request('POST', '/search/default.aspx/getsearchresults', [
-            'json' => $jsonReq,
-            'cookies' => $this->jar
+            'json'    => $jsonReq,
+            'cookies' => $this->jar,
         ]);
 
-        $resp = $req->getBody();
-        $json = json_decode($resp);
+        $resp         = $req->getBody();
+        $json         = json_decode($resp);
         $totalRecipes = $json->d->TotalResults;
 
         $jsonReq['pagesize'] = $totalRecipes;
+
+        $this->message('Getting list of recipes');
         $req2 = $this->client->request('POST', '/search/default.aspx/getsearchresults', [
-            'json' => $jsonReq,
-            'cookies' => $this->jar
+            'json'    => $jsonReq,
+            'cookies' => $this->jar,
         ]);
-        $resp2 = $req->getBody();
+
+        $resp2 = $req2->getBody();
         $json2 = json_decode($resp2);
 
         return $json2->d->Items;
@@ -114,21 +118,24 @@ class Export
     {
         $base = $this->output . '/clean/';
 
-        foreach($list as $item) {
-            $req = $this->client->request('GET', '/recipes/view.aspx?id=' . $item->Id , ['cookies' => $this->jar]);
+        foreach ($list as $item) {
+            $this->message('Processing ' . $item->Title);
+            $req = $this->client->request('GET', '/recipes/view.aspx?id=' . $item->Id, ['cookies' => $this->jar]);
 
             $filename = $this->toAscii($item->Title) . '.' . $this->config['output_format'];
 
-            $html = $req->getBody();
+            $html = (string) $req->getBody();
 
             $recipe = $this->crawl($html);
 
-            $tmpl = $this->twig->loadTemplate($this->config['template']);
+            $tmpl    = $this->twig->loadTemplate($this->config['template']);
             $content = $tmpl->render($recipe);
 
-            $this->save($filename,$content);
-
+            $this->message('Saving ' . $item->Title);
+            $this->save($filename, $content);
         }
+
+        $this->message('Done');
 
     }
 
@@ -158,6 +165,7 @@ class Export
         $recipe['cook_time']   = $this->getNode('cphMiddle_cphMain_lblTotalTime');
         $recipe['description'] = $this->getNode('cphMiddle_cphMain_lblDescription');
         $recipe['serves']      = $this->getNode('cphMiddle_cphMain_lblYield');
+        $recipe['notes']       = $this->getNode('cphMiddle_cphMain_lblNotes');
 
         return $recipe;
 
@@ -269,6 +277,11 @@ class Export
         $clean = preg_replace("/[\/_|+ -]+/", $delimiter, $clean);
 
         return $clean;
+    }
+
+    private function message($msg)
+    {
+        echo $msg . PHP_EOL;
     }
 
 }

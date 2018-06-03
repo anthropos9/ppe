@@ -28,6 +28,7 @@ switch ($task) {
         $pw = $argv[3];
 
         $export->login($un,$pw);
-        $export->getRecipes();
+        $list = $export->getRecipes();
+        $export->download($list);
         break;
 }
