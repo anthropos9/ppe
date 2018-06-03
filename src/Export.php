@@ -279,7 +279,7 @@ class Export
         return $clean;
     }
 
-    private function message($msg)
+    public function message($msg)
     {
         echo $msg . PHP_EOL;
     }

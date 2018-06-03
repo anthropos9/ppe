@@ -1,16 +1,27 @@
 {
+    "name": "anthropos9/ppe",
+    "description": "An exporter for the Pepperplate recipe management system",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Sean Dean",
+            "email": "anthropos9@gmail.com"
+        }
+    ],
     "autoload": {
         "psr-4": {
             "Ppe\\": "src/"
         }
     },
     "require": {
-        "league/csv": "^7.2",
         "guzzlehttp/guzzle": "^6.1",
-        "kint-php/kint": "^2.2",
         "symfony/dom-crawler": "^3.4",
         "symfony/css-selector": "^3.4",
         "symfony/yaml": "^3.3",
         "twig/twig": "^2.0"
+    },
+    "require-dev" : {
+        "kint-php/kint": "^2.2"
     }
 }
