@@ -200,6 +200,8 @@ $this->save($filename, $content);
 
                 $recipe = $this->crawl($html);
 
+                $this->getImage($recipe['image'], $filename);
+
                 $tmpl    = $this->twig->loadTemplate($this->config['template']);
                 $content = $tmpl->render($recipe);
 
@@ -244,6 +246,8 @@ $this->save($filename, $content);
             'tags'        => false,
             'ingredients' => '',
             'directions'  => '',
+            'image',
+
         ];
 
         $this->crawler = new Crawler($html);
@@ -259,6 +263,7 @@ $this->save($filename, $content);
         $recipe['description'] = $this->getNode('cphMiddle_cphMain_lblDescription');
         $recipe['serves']      = $this->getNode('cphMiddle_cphMain_lblYield');
         $recipe['notes']       = $this->getNode('cphMiddle_cphMain_lblNotes');
+        $recipe['image']       = $this->getImageNode('cphMiddle_cphMain_imgRecipeThumb');
 
         return $recipe;
 
@@ -300,6 +305,35 @@ $this->save($filename, $content);
 
     }
 
+    private function getImage($img, $filename)
+    {
+
+        if ($img) {
+            $raw     = substr($img, 0, strpos($img, '?'));
+            $bits    = explode(".", $raw);
+            $ext     = array_pop($bits);
+            $newName = $this->createFileName($ext, basename($filename));
+
+            if (!file_exists($this->output . 'images')) {
+                mkdir($this->output . 'images');
+            }
+
+            $handle = fopen($this->output . 'images/' . $newName,'w');
+
+            try {
+                $this->client->request("GET", $raw, ['cookies' => $this->jar, 'sink' => $handle]);
+            } catch (ConnectException $e) {
+                $this->message(Psr7\str($e->getResponse()));
+            } catch (ServerException $e) {
+                $this->message(Psr7\str($e->getResponse));
+            } catch (Exception $e) {
+                $this->message('There was a problem downloading the image ' . $newName);
+            }
+
+        }
+
+    }
+
     /**
      * Get a node if it exists
      * @param  string $id the ID of the node being pulled
@@ -328,6 +362,22 @@ $this->save($filename, $content);
 
         if ($node->count() > 0) {
             return $node->attr('href');
+        } else {
+            return false;
+        }
+
+    }
+    /**
+     * Get the HREF attribute of a link node
+     * @param  string $id node ID
+     * @return string     The processed node or FALSE
+     */
+    private function getImageNode($id)
+    {
+        $node = $this->crawler->filter('#' . $id);
+
+        if ($node->count() > 0) {
+            return $node->attr('src');
         } else {
             return false;
         }
@@ -376,14 +426,14 @@ $this->save($filename, $content);
         return $tags ?? false;
     }
 
-/*    private function createFileName($ext, $original)
-{
-$bits = explode(".", $original);
-array_pop($bits);
-$bits[] = $ext;
+    private function createFileName($ext, $original)
+    {
+        $bits = explode(".", $original);
+        array_pop($bits);
+        $bits[] = $ext;
 
-return implode(".", $bits);
-}*/
+        return implode(".", $bits);
+    }
 
     /**
      * Convert a string to a filename safe string
