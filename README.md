@@ -1,5 +1,5 @@
 # Pepperplate Exporter
-A tool for exporting recipes out of the [Pepperplate](http://www.pepperplate.com/) recipe managment system and formatting those recipes in a way that is useful to the user.
+A tool for exporting recipes out of the [Pepperplate](http://www.pepperplate.com/) recipe managment system and formatting those recipes in a way that is useful to the user. It will also download and save any images associated with the recipes.
 
 ## Requirements
 
